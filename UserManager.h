@@ -30,6 +30,8 @@ enum eUserFlags
     DOOR_BOTH = DOOR_ONE | DOOR_TWO,
 };
 
+extern int stricmp(const char*, const char*);
+
 
 // This structure is stored in EEPROM for each user
 struct kUser
@@ -91,7 +93,9 @@ public:
             kUser k_OldUser;
             if (!ReadUserAt(U, &k_OldUser))
             {
+#ifdef STD_PRINT_EN
                 Utils::Print("Error: The EEPROM is full\r\n");
+#endif
                 return false;
             }
     
@@ -107,15 +111,18 @@ public:
             {
                 if (!ShiftUsersUp(U)) // Fill position U+1 with the user at position U
                 {
+#ifdef STD_PRINT_EN
                     Utils::Print("Error: The EEPROM is full\r\n");
+#endif
                     return false;
                 }
                 WriteUserAt(U, pk_NewUser); 
                 break;
             }
         }
-        
+#ifdef STD_PRINT_EN
         Utils::Print("New user stored successfully:\r\n");   
+#endif
         PrintUser(pk_NewUser);
         return true;
     }
@@ -143,7 +150,9 @@ public:
 
                 char s8_Buf[100];
                 sprintf(s8_Buf, "The user '%s' has been deleted.\r\n", k_User.s8_Name);
+#ifdef STD_PRINT_EN
                 Utils::Print(s8_Buf);
+#endif
             }
         }
     }
@@ -170,33 +179,48 @@ public:
     }
           
     // Prints lines like 
-    // "Claudia             6D 2F 8A 44 00 00 00    (door 1)"   
-    // "Johnathan           10 FC D9 33 00 00 00    (door 1 + 2)"   
     static void PrintUser(kUser* pk_User)
     {
+#ifdef STD_PRINT_EN
         Utils::Print(pk_User->s8_Name);
-    
+#endif
         int s32_Spaces = NAME_BUF_SIZE - strlen(pk_User->s8_Name) + 2;
         for (int i=0; i<s32_Spaces; i++)
         {
+#ifdef STD_PRINT_EN
             Utils::Print(" ");
+#endif
         }
     
         // The ID may be 4 or 7 bytes long
+#ifdef STD_PRINT_EN
         Utils::PrintHexBuf(pk_User->ID.u8, 7);
+#endif
 
+#ifdef STD_PRINT_EN
         switch (pk_User->u8_Flags & DOOR_BOTH)
         {
-            case DOOR_ONE:  Utils::Print("   (door 1)\r\n");            break;
-            case DOOR_TWO:  Utils::Print("   (door 2)\r\n");            break;
-            case DOOR_BOTH: Utils::Print("   (door 1 + 2)\r\n");        break;
-            default:        Utils::Print("   (no door specified)\r\n"); break;
+            case DOOR_ONE:
+            	Utils::Print("   (door 1)\r\n");
+            	break;
+            case DOOR_TWO:
+            	Utils::Print("   (door 2)\r\n");
+            	break;
+            case DOOR_BOTH:
+            	Utils::Print("   (door 1 + 2)\r\n");
+            	break;
+            default:
+            	Utils::Print("   (no door specified)\r\n");
+            	break;
         }
+#endif
     }
 
     static void ListAllUsers()
     {
+#ifdef STD_PRINT_EN
         Utils::Print("Users stored in EEPROM:\r\n");
+#endif
 
         kUser k_User;        
         for (int U=0; true; U++)
@@ -206,7 +230,12 @@ public:
 
             if (k_User.ID.u64 == 0)
             {
-                if (U == 0) Utils::Print("No users.\r\n");
+                if (U == 0)
+                {
+#ifdef STD_PRINT_EN
+                	Utils::Print("No users.\r\n");
+#endif
+                }
                 break;
             }
                 

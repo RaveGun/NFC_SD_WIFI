@@ -2,6 +2,7 @@
     class Utils: Some small functions.
 **************************************************************************/
 
+#include "Config.h"
 #include <SD.h>
 #include "PN532.h"
 #include "Utils.h"
@@ -39,7 +40,7 @@ void OLEDScreen::Initialize(void)
 void OLEDScreen::ShowReady(void)
 {
 	display.clear();
-	display.drawXbm(43, 0, coffee_oled_width, coffee_oled_height, coffee_oled_bits);
+	display.drawXbm(43, 31, coffee_oled_width, coffee_oled_height, coffee_oled_bits);
 	display.display();
 }
 
@@ -69,6 +70,27 @@ void OLEDScreen::ShowBackup(void)
 	display.clear();
 	display.drawXbm(32, 0, backup_oled_width, backup_oled_height, backup_oled_bits);
 	display.display();
+}
+
+void OLEDScreen::ShowNFCRF(void)
+{
+	static bool state = true;
+
+	if(true == state)
+	{
+		/* Display image */
+		display.drawXbm(47, 0, nfc_rf_sign_width, nfc_rf_sign_height, nfc_rf_signs_bits);
+		display.display();
+		state = false;
+	}
+	else
+	{
+		display.setColor(BLACK);
+		display.fillRect(47, 0, nfc_rf_sign_width, nfc_rf_sign_height);
+		display.setColor(WHITE);
+		display.display();
+		state = true;
+	}
 }
 
 void OLEDScreen::ShowProgressBar(uint16_t currentVal, uint16_t totalVal)
@@ -269,8 +291,10 @@ bool Utils::Backup_Data(void)
 			  if(!SD.remove(inputFile.name()))
 			  {
 				  /* Error deleting */
+#ifdef STD_PRINT_EN
 				  Utils::Print("error deleting: ", 0);
 				  Utils::Print(inputFile.name(), LF);
+#endif
 				  retVal = false;
 			  }
 		  }
@@ -294,6 +318,8 @@ void Utils::Base36(uint64_t u64_ID, char *s8_LF)
     if(8 == pos) pos--;
   }
 }
+
+#ifdef STD_PRINT_EN
 
 void Utils::Print(const char* s8_Text, const char* s8_LF) //=NULL
 {
@@ -342,17 +368,6 @@ void Utils::PrintHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, const c
     if (s8_LF) Print(s8_LF);
 }
 
-void Utils::GetHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, String* retVal)
-{
-  *retVal = "";
-  
-  for (uint32_t i=0; i < u32_DataLen; i++)
-  {
-    *retVal += String(u8_Data[i]);
-  }
-  *retVal += '\0';
-}
-
 // Converts an interval in milliseconds into days, hours, minutes and prints it
 void Utils::PrintInterval(uint64_t u64_Time, const char* s8_LF)
 {
@@ -366,6 +381,20 @@ void Utils::PrintInterval(uint64_t u64_Time, const char* s8_LF)
     sprintf(Buf, "%d days, %02d:%02d hours", s32_Days, s32_Hour, s32_Min);
     Print(Buf, s8_LF);   
 }
+
+#endif
+
+void Utils::GetHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, String* retVal)
+{
+  *retVal = "";
+
+  for (uint32_t i=0; i < u32_DataLen; i++)
+  {
+    *retVal += String(u8_Data[i]);
+  }
+  *retVal += '\0';
+}
+
 
 // We need a special time counter that does not roll over after 49 days (as millis() does) 
 uint64_t Utils::GetMillis64()

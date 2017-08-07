@@ -164,7 +164,7 @@ class PN532
     bool SelectCard();
 
     // This function is overridden in Desfire.cpp
-    virtual bool SwitchOffRfField();
+    /*virtual*/ bool SwitchOffRfField();
             
     // ISO14443A functions
     bool ReadPassiveTargetID(byte* uidBuffer, byte* uidLength, eCardType* pe_CardType);

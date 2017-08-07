@@ -22,7 +22,7 @@
 extern SSD1306 display;
 extern File root;
 
-
+#ifdef STD_PRINT_EN
 // -------------------------------------------------------------------------------------------------------------------
 // USB connection to Terminal program (Teraterm) on PC via COM port
 // When you compile the code for Linux, Windows or any other platform you must modify this class.
@@ -53,6 +53,7 @@ public:
         Serial.print(s8_Text);
     }
 };
+#endif
 
 // -------------------------------------------------------------------------------------------------------------------
 
@@ -65,6 +66,7 @@ public:
 	static void ShowWiFi(void);
 	static void ShowDT(void);
 	static void ShowBackup(void);
+	static void ShowNFCRF(void);
 	static void ShowProgressBar(uint16_t currentVal, uint16_t totalVal);
 };
 
@@ -155,14 +157,16 @@ public:
 
     static uint64_t GetMillis64();
     static void     Base36(uint64_t u64_ID, char *s8_LF);
+#ifdef STD_PRINT_EN
     static void     Print(const char*   s8_Text,  const char* s8_LF=NULL);
     static void     PrintDec  (int      s32_Data, const char* s8_LF=NULL);
     static void     PrintHex8 (byte     u8_Data,  const char* s8_LF=NULL);
     static void     PrintHex16(uint16_t u16_Data, const char* s8_LF=NULL);
     static void     PrintHex32(uint32_t u32_Data, const char* s8_LF=NULL);
     static void     PrintHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, const char* s8_LF=NULL, int s32_Brace1=-1, int S32_Brace2=-1);
-    static void     GetHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, String* retVal);
     static void     PrintInterval(uint64_t u64_Time, const char* s8_LF=NULL);
+#endif
+    static void     GetHexBuf(const byte* u8_Data, const uint32_t u32_DataLen, String* retVal);
     static void     GenerateRandom(byte* u8_Random, int s32_Length);
     static void     RotateBlockLeft(byte* u8_Out, const byte* u8_In, int s32_Length);
     static void     BitShiftLeft(uint8_t* u8_Data, int s32_Length);

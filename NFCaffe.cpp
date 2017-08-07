@@ -5,6 +5,7 @@
 
 **************************************************************************/
 
+#include "Config.h"
 #include "NFCaffe.h"
 
 #include <Arduino.h>
@@ -16,7 +17,6 @@
 #include <cstdio>
 #include <cstring>
 
-//#include "Classic.h"
 #include "UserManager.h"
 #include "Utils.h"
 
@@ -61,7 +61,6 @@
 #define SD_CHIP_SELECT      15
 
 #define LED_OFF (0u)
-#define LED_BLUE (1u)
 
 typedef enum {
 	CARD_READ,
@@ -86,16 +85,27 @@ kCard		k_Card;
 
 void SetLED(uint8_t e_LED)
 {
-    Utils::WritePin(LED_BUILTIN,   HIGH);
-
+#ifdef NO_BUZZER
     switch (e_LED)
     {
-        case LED_BLUE:
-            Utils::WritePin(LED_BUILTIN,   LOW); // LED on Teensy
+        case LED_BUILTIN:
+            Utils::WritePin(LED_BUILTIN, LOW);
             break;
-        default:  // Just to avoid stupid gcc compiler warning
+        default:
+            Utils::WritePin(LED_BUILTIN, HIGH);
             break;
     }
+#else
+    switch (e_LED)
+    {
+        case LED_BUILTIN:
+            Utils::WritePin(LED_BUILTIN, HIGH);
+            break;
+        default:
+            Utils::WritePin(LED_BUILTIN, LOW);
+            break;
+    }
+#endif
 }
 
 // If everything works correctly, the green LED will flash shortly (20 ms).
@@ -107,9 +117,13 @@ void SetLED(uint8_t e_LED)
 // or on power failure the red LED flashes shortly.
 void FlashLED(uint8_t e_LED, int s32_Interval)
 {
+#ifdef NO_BUZZER
     SetLED(e_LED);
+#endif
     LongDelay(s32_Interval);
+#ifdef NO_BUZZER
     SetLED(LED_OFF);
+#endif
 }
 
 
@@ -118,8 +132,10 @@ void InitReader(bool b_ShowError)
 {
     if (b_ShowError)
     {
-        SetLED(LED_BLUE);
-        //Utils::Print("Communication Error -> Reset PN532\r\n");
+        //SetLED(LED_BUILTIN);
+#ifdef STD_PRINT_EN
+        Utils::Print("Communication Error -> Reset PN532\r\n");
+#endif
     }
 
     do // pseudo loop (just used for aborting with break;)
@@ -129,12 +145,14 @@ void InitReader(bool b_ShowError)
         // Reset the PN532
         gi_PN532.begin(); // delay > 400 ms
 		OLEDScreen::ShowReady();
+		OLEDScreen::ShowNFCRF();
+
 
         byte IC, VersionHi, VersionLo, Flags;
         if (!gi_PN532.GetFirmwareVersion(&IC, &VersionHi, &VersionLo, &Flags))
             break;
 
-#ifdef DEBUG_ON
+#ifdef STD_PRINT_EN
         char Buf[80];
         sprintf(Buf, "Chip: PN5%02X, Firmware version: %d.%d\r\n", IC, VersionHi, VersionLo);
         Utils::Print(Buf);
@@ -160,7 +178,7 @@ void InitReader(bool b_ShowError)
     if (b_ShowError)
     {
         //LongDelay(250); // a long interval to make the LED flash very slowly
-        SetLED(LED_OFF);
+        //SetLED(LED_OFF);
     }
 }
 
@@ -170,10 +188,12 @@ void setup()
     gs8_CommandBuffer[0] = 0;
 
     Utils::SetPinMode(LED_BUILTIN,   OUTPUT);
-    FlashLED(LED_BLUE, 500);
+    FlashLED(LED_BUILTIN, 500);
 
+#ifdef STD_PRINT_EN
     // Open USB serial port
     SerialClass::Begin(115200);
+#endif
 
     WLAN::ZeroInit();
 
@@ -184,6 +204,7 @@ void setup()
     	gSMCurrentState = SDCARD_ERROR;
     } else {
 		OLEDScreen::ShowReady();
+		OLEDScreen::ShowNFCRF();
     }
 
     root = SD.open("/");
@@ -204,7 +225,7 @@ void loop()
 		    	/* state machine wait for TCP clients */
 				OLEDScreen::ShowWiFi();
 				WLAN::Initialize();
-				FlashLED(LED_BLUE, 1000);
+				FlashLED(LED_BUILTIN, 1000);
 				if(true == WLAN::StartTCP())
 				{
 					OLEDScreen::ShowDT();
@@ -223,26 +244,31 @@ void loop()
 					gSMCurrentState = CARD_READ;
 					WLAN::ZeroInit();
 					OLEDScreen::ShowReady();
+					OLEDScreen::ShowNFCRF();
 				}
 				break;
 
 			case BACKUP_DATA:
 				WLAN::ZeroInit();
 				OLEDScreen::ShowBackup();
+#ifdef SKIP_BACKUP
 				if(true == Utils::Backup_Data())
 				{
+#endif
 					gSMCurrentState = CARD_READ;
+#ifdef SKIP_BACKUP
 				}
 				else
 				{
 					gSMCurrentState = SDCARD_ERROR;
 				}
+#endif
 				break;
 
 			case SDCARD_ERROR:
 				/* wait for RESET */
 		    	OLEDScreen::ShowSDError();
-		    	FlashLED(LED_BLUE, 5000);
+		    	FlashLED(LED_BUILTIN, 5000);
 				break;
 
 			default:
@@ -273,26 +299,31 @@ void SM_CardReading(void)
 		gu64_LastID = 0;
 
 		// Flash the green LED shortly. On Power Failure flash the red LED shortly.
-		FlashLED(LED_BLUE, 100);
+		FlashLED(LED_BUILTIN, 100);
+		OLEDScreen::ShowNFCRF();
 	}
 	else if (gu64_LastID == k_User.ID.u64)
 	{
 		// Still the same card present - Nothing to do
 	}
-	else if(0x000000BB36AB22ULL == k_User.ID.u64)
+	else if(	(0x000000BB36AB22ULL == k_User.ID.u64)
+			||	(0x000000651B121CULL == k_User.ID.u64))
 	{
 		/*0x000000BB36AB22ULL - MASTER key found*/
+		/*0x000000651B121CULL - ALT_MASTER key found*/
 		gSMCurrentState = UPLOAD_DATA;
 	}
 	else
 	{
+#ifdef STD_PRINT_EN
 		Utils::PrintHexBuf(&k_User.ID.u8[0], 7, LF);
+#endif
 		// A different card was found in the RF field
 		if(Utils::UpdateSDCardCounter(k_User.ID.u64, &k_Card, 0))
 		{
 			// Avoid that the door is opened twice when the card is in the RF field for a longer time.
 			gu64_LastID = k_User.ID.u64;
-			FlashLED(LED_BLUE, 200);
+			FlashLED(LED_BUILTIN, 200);
 		}
 		else
 		{
