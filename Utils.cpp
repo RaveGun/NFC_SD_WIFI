@@ -16,8 +16,21 @@
 
 const char baseC[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
+#if defined(OLED_TYPEDEF)
+OLED_TYPEDEF display(OLED_ADDR, OLED_SDA, OLED_SCL);
+#endif
 File root;
+
+const uint8_t coffee_cup_position[] = {
+      /* 0   0   1   0   1   1   1   2   2   3   3   4   5   6   7   7*/
+		 0,  0,  1,  1,  2,  3,  4,  6,  8, 11, 14, 18, 23, 29, 36, 43,
+      /* 7   6   6   5   4   3   2   2   2   1   1   1   0   1   0   0 */
+		50, 56, 62, 67, 71, 74, 76, 78, 80, 81, 82, 83, 83, 84, 84, 84,
+      /* reverse */
+		84, 84, 84, 83, 83, 82, 81, 80, 78, 76, 74, 71, 67, 62, 56, 50,
+		43, 36, 29, 23, 18, 14, 11,  8,  6,  4,  3,  2,  1,  1,  0,  0
+};
+uint8_t coffee_cup_pos_index = 0;
 
 /* WIFI AP settings */
 const char *ssid = "NFCoffee";
@@ -40,7 +53,7 @@ void OLEDScreen::Initialize(void)
 void OLEDScreen::ShowReady(void)
 {
 	display.clear();
-	display.drawXbm(43, 31, coffee_oled_width, coffee_oled_height, coffee_oled_bits);
+	display.drawXbm(coffee_cup_position[coffee_cup_pos_index], 31, coffee_oled_width, coffee_oled_height, coffee_oled_bits);
 	display.display();
 }
 
@@ -76,21 +89,26 @@ void OLEDScreen::ShowNFCRF(void)
 {
 	static bool state = true;
 
+	display.setColor(BLACK);
+	display.fillRect(coffee_cup_position[coffee_cup_pos_index], 31, coffee_oled_width, coffee_oled_height);
+	display.setColor(WHITE);
+
 	if(true == state)
 	{
 		/* Display image */
-		display.drawXbm(47, 0, nfc_rf_sign_width, nfc_rf_sign_height, nfc_rf_signs_bits);
-		display.display();
+		display.drawXbm(5 + coffee_cup_position[coffee_cup_pos_index], 0, nfc_rf_sign_width, nfc_rf_sign_height, nfc_rf_signs_bits);
 		state = false;
 	}
 	else
 	{
 		display.setColor(BLACK);
-		display.fillRect(47, 0, nfc_rf_sign_width, nfc_rf_sign_height);
+		display.fillRect(5 + coffee_cup_position[coffee_cup_pos_index], 0, nfc_rf_sign_width, nfc_rf_sign_height);
 		display.setColor(WHITE);
-		display.display();
-		state = true;
+		++coffee_cup_pos_index %= sizeof(coffee_cup_position);
+ 		state = true;
 	}
+	display.drawXbm(coffee_cup_position[coffee_cup_pos_index], 31, coffee_oled_width, coffee_oled_height, coffee_oled_bits);
+	display.display();
 }
 
 void OLEDScreen::ShowProgressBar(uint16_t currentVal, uint16_t totalVal)
@@ -583,8 +601,17 @@ bool Utils::UpdateSDCardCounter(uint64_t u64_ID, kCard* pk_Card, uint64_t u64_St
 		dataFile.write(&bufCoffee[0], 4u);
 		dataFile.close();
 
+		WritePin(LED_BUILTIN, HIGH);
+
 		display.drawString(64, 40, "Saved!");
 		display.display();
+
+		DelayMilli(150);
+		WritePin(LED_BUILTIN, LOW);
+		DelayMilli(100);
+		WritePin(LED_BUILTIN, HIGH);
+		DelayMilli(150);
+		WritePin(LED_BUILTIN, LOW);
 	}
 	else {
 		retResult = false;

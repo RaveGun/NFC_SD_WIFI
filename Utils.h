@@ -2,11 +2,29 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "Config.h"
 
 #include <Arduino.h>
 #include <SD.h>
-#include <SSD1306.h>
-#include <SSD1306Wire.h>
+
+
+//#include <SSD1306.h>
+//#include <SSD1306Wire.h>
+//
+//#include <SH1106.h>
+//#include <SH1106Wire.h>
+/* Include defines */
+#if (OLED_SIZE == OLED_SMALL)
+	#include <SSD1306.h>
+	#include <SSD1306Wire.h>
+	#define OLED_TYPEDEF SSD1306
+#elif (OLED_SIZE == OLED_BIG)
+	#include <SH1106.h>
+	#include <SH1106Wire.h>
+	#define OLED_TYPEDEF SH1106
+#else
+	#error NO OLED type defined
+#endif
 
 #define USE_HARDWARE_SPI   true
 #if USE_HARDWARE_SPI
@@ -15,11 +33,17 @@
 
 #define LF  "\r\n" // LineFeed 
 
+// Built in LED of Wemos Mini D1
+#define LED_BUILTIN 2
+
 // I2C pin configuration
 #define OLED_SCL    D1
 #define OLED_SDA    D2
 #define OLED_ADDR   (0x3cu)
-extern SSD1306 display;
+
+//extern SSD1306 display;
+extern SH1106 display;
+
 extern File root;
 
 #ifdef STD_PRINT_EN

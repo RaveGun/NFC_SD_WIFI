@@ -53,10 +53,6 @@
 // The software SPI SSEL pin (Chip Select)
 #define SPI_CS_PIN        0
 
-
-// Built in LED of Wemos Mini D1
-#define LED_BUILTIN 2
-
 // SD card SPI CS pin
 #define SD_CHIP_SELECT      15
 
@@ -88,7 +84,7 @@ void SetLED(uint8_t e_LED)
 #ifdef NO_BUZZER
     switch (e_LED)
     {
-        case LED_BUILTIN:
+        case HIGH:
             Utils::WritePin(LED_BUILTIN, LOW);
             break;
         default:
@@ -98,7 +94,7 @@ void SetLED(uint8_t e_LED)
 #else
     switch (e_LED)
     {
-        case LED_BUILTIN:
+        case HIGH:
             Utils::WritePin(LED_BUILTIN, HIGH);
             break;
         default:
@@ -118,11 +114,11 @@ void SetLED(uint8_t e_LED)
 void FlashLED(uint8_t e_LED, int s32_Interval)
 {
 #ifdef NO_BUZZER
-    SetLED(e_LED);
+    SetLED(HIGH);
 #endif
     LongDelay(s32_Interval);
 #ifdef NO_BUZZER
-    SetLED(LED_OFF);
+    SetLED(LOW);
 #endif
 }
 
@@ -132,7 +128,7 @@ void InitReader(bool b_ShowError)
 {
     if (b_ShowError)
     {
-        //SetLED(LED_BUILTIN);
+        //SetLED(HIGH);
 #ifdef STD_PRINT_EN
         Utils::Print("Communication Error -> Reset PN532\r\n");
 #endif
@@ -178,7 +174,7 @@ void InitReader(bool b_ShowError)
     if (b_ShowError)
     {
         //LongDelay(250); // a long interval to make the LED flash very slowly
-        //SetLED(LED_OFF);
+        //SetLED(LOW);
     }
 }
 
@@ -186,9 +182,6 @@ void InitReader(bool b_ShowError)
 void setup()
 {
     gs8_CommandBuffer[0] = 0;
-
-    Utils::SetPinMode(LED_BUILTIN,   OUTPUT);
-    FlashLED(LED_BUILTIN, 500);
 
 #ifdef STD_PRINT_EN
     // Open USB serial port
@@ -210,6 +203,9 @@ void setup()
     root = SD.open("/");
 
     gi_PN532.InitHardwareSPI(SPI_CS_PIN, RESET_PIN);
+
+    Utils::SetPinMode(LED_BUILTIN,   OUTPUT);
+//    FlashLED(LED_BUILTIN, 500);
 
     InitReader(false);
 }
@@ -251,12 +247,12 @@ void loop()
 			case BACKUP_DATA:
 				WLAN::ZeroInit();
 				OLEDScreen::ShowBackup();
-#ifdef SKIP_BACKUP
+#ifndef SKIP_BACKUP
 				if(true == Utils::Backup_Data())
 				{
 #endif
 					gSMCurrentState = CARD_READ;
-#ifdef SKIP_BACKUP
+#ifndef SKIP_BACKUP
 				}
 				else
 				{
@@ -321,9 +317,9 @@ void SM_CardReading(void)
 		// A different card was found in the RF field
 		if(Utils::UpdateSDCardCounter(k_User.ID.u64, &k_Card, 0))
 		{
-			// Avoid that the door is opened twice when the card is in the RF field for a longer time.
+			// Avoid that the card is read twice when the card remain in the RF field for a longer time.
 			gu64_LastID = k_User.ID.u64;
-			FlashLED(LED_BUILTIN, 200);
+			//FlashLED(LED_BUILTIN, 200);
 		}
 		else
 		{
@@ -350,7 +346,6 @@ bool ReadCard(byte u8_UID[8], kCard* pk_Card)
     return true;
 }
 
-// Use this for delays > 100 ms to guarantee that the battery is checked frequently
 void LongDelay(int s32_Interval)
 {
 	#define min(a,b) ((a)<(b)?(a):(b))
